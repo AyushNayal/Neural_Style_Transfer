@@ -1,5 +1,6 @@
 import torch
 import torch.optim as optim
+from tqdm import tqdm
 from src.utils import tensor_to_img
 
 
@@ -38,29 +39,24 @@ def run_style_transfer(
         intermediate_outputs : list of (step, PIL Image) tuples
     """
 
-    # The input image is the only thing being optimized
     input_img.requires_grad_(True)
-
     optimizer = optim.Adam([input_img], lr=0.005)
-
     intermediate_outputs = []
 
-    print("Starting optimization...")
-    print(f"Steps: {num_steps} | Style weight: {style_weight} | "
-          f"Content weight: {content_weight} | TV weight: {tv_weight}\n")
+    print(f"Starting optimization — {num_steps} steps")
+    print(f"Style: {style_weight} | Content: {content_weight} | TV: {tv_weight}\n")
 
-    for step in range(1, num_steps + 1):
+    progress_bar = tqdm(range(1, num_steps + 1), desc="Optimizing", unit="step")
+
+    for step in progress_bar:
 
         optimizer.zero_grad()
 
-        # Forward pass through the model — loss probes record losses internally
         model(input_img)
 
-        # Collect and scale losses
         style_score   = sum(sl.loss for sl in style_losses) * style_weight
         content_score = sum(cl.loss for cl in content_losses) * content_weight
 
-        # TV loss operates on the raw image, not VGG features
         tv_loss(input_img)
         tv_score = tv_loss.loss
 
@@ -69,18 +65,15 @@ def run_style_transfer(
 
         optimizer.step()
 
-        # Keep pixel values valid after each step
         with torch.no_grad():
             input_img.clamp_(0, 1)
 
-        if step % 100 == 0 or step == num_steps:
-            print(
-                f"Step {step:>5}/{num_steps} | "
-                f"Total: {total_loss.item():.4f} | "
-                f"Style: {style_score.item():.4f} | "
-                f"Content: {content_score.item():.4f} | "
-                f"TV: {tv_score.item():.4f}"
-            )
+        # Update progress bar with current losses
+        progress_bar.set_postfix({
+            "total" : f"{total_loss.item():.2f}",
+            "style" : f"{style_score.item():.2f}",
+            "content": f"{content_score.item():.2f}",
+        })
 
         if step % save_every == 0:
             with torch.no_grad():

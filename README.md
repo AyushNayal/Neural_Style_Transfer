@@ -17,7 +17,7 @@ The key idea:
 - A **total variation loss** encourages spatial smoothness and reduces noise
 - The **input image** itself is the only learnable parameter — optimized using Adam
 
----
+---text
 
 ## Project structure
 
@@ -35,7 +35,7 @@ Neural-Style-Transfer/
 ├── outputs/           # generated images saved here
 └── requirements.txt
 
----
+---text
 
 ## Installation
 
